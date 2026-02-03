@@ -88,14 +88,13 @@ python main.py
 
 ### 3. 导出配置
 
-右侧面板实时显示 Lua 代码，点击"复制"按钮复制到剪贴板。
+添加完所有枪械会生成lua脚本。
 
 ### 4. 使用脚本
 
 1. 打开 **Logitech G HUB**
 2. 选择鼠标 → **脚本**
-3. 粘贴 `macro-G502.lua` 内容
-4. 将生成的 `pattern` 替换到脚本中
+3. 粘贴 `生成的lua`内容
 5. 保存启用
 
 ## 按键配置
@@ -114,8 +113,8 @@ python main.py
 {
     name = "AK-47",
     rpm = 600,
-    verticalMul = 1.0,
-    horizontalMul = 1.0,
+    verticalMul = 1.0, --垂直倍率，可以根据改枪情况和灵敏度微调。
+    horizontalMul = 1.0, --水平倍率
     pattern = {
         {y=13, x=0},    -- 第1发
         {y=26, x=-7},   -- 第2发
@@ -137,6 +136,17 @@ python pattern_generator.py <图片> [--scale-x 1.0] [--scale-y 1.0] [--debug]
 
 - `m14.lua` - M14 步枪
 - `ash-12.lua` - ASH-12 步枪
+
+### 贡献弹道数据
+
+欢迎提交 PR 分享你调试好的弹道数据！
+
+1. Fork 本仓库
+2. 在 `data/` 目录添加 `<游戏>-<枪械名>.lua` 文件
+3. 文件格式参考现有预设
+4. 提交 PR 并注明游戏名称、枪械、测试环境（灵敏度等）
+
+示例文件名：`cs2-ak47.lua`、`valorant-vandal.lua`、`apex-r301.lua`
 
 ## 技术栈
 
