@@ -40,12 +40,28 @@ class GunConfig(BaseModel):
     rpm: int = Field(default=600, description="每分钟射速")
     vertical_mul: float = Field(default=1.0, description="垂直倍率")
     horizontal_mul: float = Field(default=1.0, description="水平倍率")
+    scope_zoom: float = Field(default=1.0, description="瞄准镜倍率 (1=机瞄/无倍镜)")
+    hold_breath_coeff: float = Field(default=1.0, description="屏息系数 (屏息时的后坐力修正)")
     pattern: List[RecoilData] = Field(default=[], description="弹道数据")
+
+
+class SensitivitySettings(BaseModel):
+    """灵敏度配置（对应游戏内设置）"""
+    mouse_sens: float = Field(default=5, description="鼠标灵敏度")
+    vertical_sens: float = Field(default=1, description="垂直灵敏度")
+    horizontal_sens: float = Field(default=1, description="水平灵敏度")
+    ads_sens_mul: float = Field(default=1, description="举枪灵敏度加成")
+    ads_vertical_sens: float = Field(default=1, description="举枪瞄准垂直灵敏度")
+    ads_horizontal_sens: float = Field(default=1, description="举枪瞄准水平灵敏度")
+    screen_dist_coeff: float = Field(default=1.33, description="屏幕距离系数")
+    base_fov: float = Field(default=90, description="基础视场角(度)")
+    hold_breath: bool = Field(default=False, description="是否屏息")
 
 
 class LuaGenerateRequest(BaseModel):
     """Lua生成请求"""
     guns: List[GunConfig] = Field(..., description="枪械配置列表")
+    sensitivity: SensitivitySettings = Field(default_factory=SensitivitySettings, description="灵敏度配置")
 
 
 class LuaGenerateResponse(BaseModel):

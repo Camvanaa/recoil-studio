@@ -23,7 +23,7 @@ async def generate_lua(request: LuaGenerateRequest):
                 lua_code=""
             )
         
-        lua_code = LuaGenerator.generate(request.guns)
+        lua_code = LuaGenerator.generate(request.guns, request.sensitivity)
         
         return LuaGenerateResponse(
             success=True,
@@ -45,7 +45,7 @@ async def download_lua(request: LuaGenerateRequest):
     生成并下载Lua脚本文件
     """
     try:
-        lua_code = LuaGenerator.generate(request.guns)
+        lua_code = LuaGenerator.generate(request.guns, request.sensitivity)
         
         return PlainTextResponse(
             content=lua_code,

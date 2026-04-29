@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import ImageUpload from './components/ImageUpload.vue'
 import PatternEditor from './components/PatternEditor.vue'
 import LuaPreview from './components/LuaPreview.vue'
+import { defaultSensitivity, type SensitivitySettings } from './api'
 
 interface Point {
   x: number
@@ -19,6 +20,8 @@ interface Gun {
   rpm: number
   vertical_mul: number
   horizontal_mul: number
+  scope_zoom: number
+  hold_breath_coeff: number
   pattern: RecoilData[]
 }
 
@@ -29,6 +32,7 @@ const imageWidth = ref(0)
 const imageHeight = ref(0)
 const guns = ref<Gun[]>([])
 const currentStep = ref(1)
+const sensitivity = ref<SensitivitySettings>({ ...defaultSensitivity })
 
 function handlePatternDetected(data: {
   points: Point[]
@@ -141,6 +145,7 @@ function handleReset() {
         <section v-if="currentStep === 3" class="section">
           <LuaPreview
             :guns="guns"
+            :sensitivity="sensitivity"
             @remove="handleRemoveGun"
             @back="currentStep = 2"
             @add-more="currentStep = 1"

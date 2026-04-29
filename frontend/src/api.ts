@@ -26,7 +26,33 @@ export interface GunConfig {
   rpm: number
   vertical_mul: number
   horizontal_mul: number
+  scope_zoom: number
+  hold_breath_coeff: number
   pattern: RecoilData[]
+}
+
+export interface SensitivitySettings {
+  mouse_sens: number
+  vertical_sens: number
+  horizontal_sens: number
+  ads_sens_mul: number
+  ads_vertical_sens: number
+  ads_horizontal_sens: number
+  screen_dist_coeff: number
+  base_fov: number
+  hold_breath: boolean
+}
+
+export const defaultSensitivity: SensitivitySettings = {
+  mouse_sens: 5,
+  vertical_sens: 1,
+  horizontal_sens: 1,
+  ads_sens_mul: 1,
+  ads_vertical_sens: 1,
+  ads_horizontal_sens: 1,
+  screen_dist_coeff: 1.33,
+  base_fov: 90,
+  hold_breath: false
 }
 
 export interface LuaGenerateResponse {
@@ -76,18 +102,18 @@ export const api = {
     return response.data
   },
 
-  async generateLua(guns: GunConfig[]): Promise<LuaGenerateResponse> {
+  async generateLua(guns: GunConfig[], sensitivity?: SensitivitySettings): Promise<LuaGenerateResponse> {
     const response = await axios.post<LuaGenerateResponse>(
       `${API_BASE}/lua/generate`,
-      { guns }
+      { guns, sensitivity: sensitivity || defaultSensitivity }
     )
     return response.data
   },
 
-  async downloadLua(guns: GunConfig[]): Promise<Blob> {
+  async downloadLua(guns: GunConfig[], sensitivity?: SensitivitySettings): Promise<Blob> {
     const response = await axios.post(
       `${API_BASE}/lua/download`,
-      { guns },
+      { guns, sensitivity: sensitivity || defaultSensitivity },
       { responseType: 'blob' }
     )
     return response.data

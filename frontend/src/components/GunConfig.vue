@@ -7,6 +7,8 @@ interface Gun {
   rpm: number
   vertical_mul: number
   horizontal_mul: number
+  scope_zoom: number
+  hold_breath_coeff: number
   pattern: RecoilData[]
 }
 
@@ -23,6 +25,8 @@ const name = ref('AK-47')
 const rpm = ref(600)
 const verticalMul = ref(1.0)
 const horizontalMul = ref(1.0)
+const scopeZoom = ref(1.0)
+const holdBreathCoeff = ref(1.0)
 
 function handleAdd() {
   if (!name.value.trim()) {
@@ -40,6 +44,8 @@ function handleAdd() {
     rpm: rpm.value,
     vertical_mul: verticalMul.value,
     horizontal_mul: horizontalMul.value,
+    scope_zoom: scopeZoom.value,
+    hold_breath_coeff: holdBreathCoeff.value,
     pattern: props.pattern
   })
 }
@@ -68,6 +74,16 @@ function handleAdd() {
       <div class="field">
         <label>水平倍率</label>
         <input type="number" v-model.number="horizontalMul" step="0.1" min="0.1" max="5" />
+      </div>
+
+      <div class="field">
+        <label>瞄准镜倍率 (1=机瞄)</label>
+        <input type="number" v-model.number="scopeZoom" step="0.5" min="1" max="12" />
+      </div>
+
+      <div class="field">
+        <label>屏息系数</label>
+        <input type="number" v-model.number="holdBreathCoeff" step="0.1" min="0.1" max="5" />
       </div>
     </div>
     

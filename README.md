@@ -6,6 +6,8 @@ FPS 游戏压枪弹道可视化编辑器 + 罗技鼠标宏脚本
 
 ![Recoil Studio](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vue.js) ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python) ![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey)
 
+说在前面!!!! 最新版本的fov和mdv公式有问题 导致切换倍镜可能不准 有思路的欢迎pr
+
 ## 功能特性
 
 - **图像识别** - 自动从弹道图片提取绿色标记点
