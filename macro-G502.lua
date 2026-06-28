@@ -32,36 +32,36 @@ local guns = {
         verticalMul = 1.0,
         horizontalMul = 1.0,
         pattern = {
-            {y=13, x=0},    -- 第1发
-            {y=26, x=-7},    -- 第2发
-            {y=24, x=-5},    -- 第3发
-            {y=24, x=7},    -- 第4发
-            {y=20, x=7},    -- 第5发
-            {y=19, x=8},    -- 第6发
-            {y=18, x=-5},    -- 第7发
-            {y=15, x=-4},    -- 第8发
-            {y=15, x=3},    -- 第9发
-            {y=13, x=7},    -- 第10发
-            {y=13, x=-5},    -- 第11发
-            {y=11, x=-6},    -- 第12发
-            {y=9, x=-5},    -- 第13发
-            {y=8, x=-8},    -- 第14发
-            {y=8, x=4},    -- 第15发
-            {y=12, x=-5},    -- 第16发
-            {y=11, x=-6},    -- 第17发
-            {y=8, x=-5},    -- 第18发
-            {y=10, x=-5},    -- 第19发
-            {y=26, x=-9},    -- 第20发
-            {y=6, x=-5},    -- 第21发
-            {y=7, x=-4},    -- 第22发
-            {y=6, x=-4},    -- 第23发
-            {y=6, x=-4},    -- 第24发
-            {y=6, x=-4},    -- 第25发
-            {y=7, x=-4},    -- 第26发
-            {y=6, x=-4},    -- 第27发
-            {y=7, x=-4},    -- 第28发
-            {y=6, x=-4},    -- 第29发
-            {y=6, x=-4},    -- 第30发
+            {y=13, x=0},    -- 第2发补偿
+            {y=26, x=-7},    -- 第3发补偿
+            {y=24, x=-5},    -- 第4发补偿
+            {y=24, x=7},    -- 第5发补偿
+            {y=20, x=7},    -- 第6发补偿
+            {y=19, x=8},    -- 第7发补偿
+            {y=18, x=-5},    -- 第8发补偿
+            {y=15, x=-4},    -- 第9发补偿
+            {y=15, x=3},    -- 第10发补偿
+            {y=13, x=7},    -- 第11发补偿
+            {y=13, x=-5},    -- 第12发补偿
+            {y=11, x=-6},    -- 第13发补偿
+            {y=9, x=-5},    -- 第14发补偿
+            {y=8, x=-8},    -- 第15发补偿
+            {y=8, x=4},    -- 第16发补偿
+            {y=12, x=-5},    -- 第17发补偿
+            {y=11, x=-6},    -- 第18发补偿
+            {y=8, x=-5},    -- 第19发补偿
+            {y=10, x=-5},    -- 第20发补偿
+            {y=26, x=-9},    -- 第21发补偿
+            {y=6, x=-5},    -- 第22发补偿
+            {y=7, x=-4},    -- 第23发补偿
+            {y=6, x=-4},    -- 第24发补偿
+            {y=6, x=-4},    -- 第25发补偿
+            {y=6, x=-4},    -- 第26发补偿
+            {y=7, x=-4},    -- 第27发补偿
+            {y=6, x=-4},    -- 第28发补偿
+            {y=7, x=-4},    -- 第29发补偿
+            {y=6, x=-4},    -- 第30发补偿
+            {y=6, x=-4},    -- 第31发补偿
         }
     },
 }
@@ -85,7 +85,7 @@ local errorX = 0                        -- X轴小数误差累加
 -- 根据RPM计算每发子弹的间隔时间(毫秒)
 function getSleepTime()
     local gun = guns[currentGunIndex]
-    return math.floor(60000 / gun.rpm)
+    return math.max(1, math.floor((60000 / gun.rpm) + 0.5))
 end
 
 -- 获取当前枪械
@@ -93,20 +93,24 @@ function getCurrentGun()
     return guns[currentGunIndex]
 end
 
--- 获取指定子弹的后坐力数据（返回小数值，不做取整）
-function getBulletRecoil(bulletIndex)
+-- 获取指定补偿段的后坐力数据（返回小数值，不做取整）
+function getBulletRecoil(stepIndex)
     local gun = getCurrentGun()
     local pattern = gun.pattern
     
-    -- 如果子弹数超过配置的弹道数据，使用最后一个
-    if bulletIndex > #pattern then
-        bulletIndex = #pattern
+    if #pattern == 0 then
+        return 0, 0
     end
-    if bulletIndex < 1 then
-        bulletIndex = 1
+
+    -- 如果补偿段超过配置范围，使用最后一个
+    if stepIndex > #pattern then
+        stepIndex = #pattern
+    end
+    if stepIndex < 1 then
+        stepIndex = 1
     end
     
-    local recoil = pattern[bulletIndex]
+    local recoil = pattern[stepIndex]
     local moveY = recoil.y * gun.verticalMul
     local moveX = recoil.x * gun.horizontalMul
     
@@ -150,6 +154,21 @@ function log(str, ...)
     if showLog then
         OutputLogMessage(scriptName .. "-[INFO]-" .. str .. "\n", ...)
     end
+end
+
+function sleepWhileHolding(duration)
+    local elapsed = 0
+    while elapsed < duration do
+        if not IsMouseButtonPressed(clickBtn) then
+            return false
+        end
+
+        local slice = math.min(4, duration - elapsed)
+        Sleep(slice)
+        elapsed = elapsed + slice
+    end
+
+    return true
 end
 
 --====================================================================================
@@ -205,6 +224,7 @@ end
 function beginRecoilControl()
     local gun = getCurrentGun()
     local sleepTime = getSleepTime()
+    local firstStepDelay = math.max(1, math.floor((sleepTime * 0.55) + 0.5))
     
     currentBullet = 0
     totalMoveY = 0
@@ -213,14 +233,21 @@ function beginRecoilControl()
     errorX = 0
     
     log("Start recoil control: %s, interval=%dms", gun.name, sleepTime)
+    log("Pattern steps=%d, inferred shots=%d", #gun.pattern, #gun.pattern + 1)
+
+    if #gun.pattern == 0 then
+        return
+    end
     
-    -- 首发延迟（等待第一发子弹发射）
-    Sleep(math.floor(sleepTime / 2))
+    -- N个弹孔只会得到N-1段补偿，所以首段补偿在第1发开火后再介入。
+    if not sleepWhileHolding(firstStepDelay) then
+        return
+    end
     
-    repeat
+    while IsMouseButtonPressed(clickBtn) and currentBullet < #gun.pattern do
         currentBullet = currentBullet + 1
         
-        -- 获取当前子弹的补偿值（小数）
+        -- 获取当前补偿段的补偿值（小数）
         local rawY, rawX = getBulletRecoil(currentBullet)
         
         -- 应用误差累加，转换为整数移动量
@@ -235,15 +262,20 @@ function beginRecoilControl()
             MoveMouseRelative(moveX, moveY)
         end
         
-        log("Bullet #%d: raw=(%.2f,%.2f) move=(%d,%d) err=(%.2f,%.2f)", 
-            currentBullet, rawY, rawX, moveY, moveX, errorY, errorX)
+        log("Step #%d -> shot #%d: raw=(%.2f,%.2f) move=(%d,%d) err=(%.2f,%.2f)", 
+            currentBullet, currentBullet + 1, rawY, rawX, moveY, moveX, errorY, errorX)
         
+        if currentBullet >= #gun.pattern then
+            break
+        end
+
         -- 等待下一发
-        Sleep(sleepTime)
-        
-    until not IsMouseButtonPressed(clickBtn)
+        if not sleepWhileHolding(sleepTime) then
+            break
+        end
+    end
     
-    log("Stop at bullet #%d, totalY=%d, totalX=%d", currentBullet, totalMoveY, totalMoveX)
+    log("Stop at step #%d, totalY=%d, totalX=%d", currentBullet, totalMoveY, totalMoveX)
     
     -- 鼠标复位
     if resetPointState and (totalMoveY ~= 0 or totalMoveX ~= 0) then

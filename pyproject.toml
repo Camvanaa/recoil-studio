@@ -1,0 +1,37 @@
+[project]
+name = "recoil-studio-api"
+version = "0.1.0"
+description = "Recoil Studio backend API and domain services"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0,<1.0.0",
+  "numpy>=2.2.0,<3.0.0",
+  "opencv-python>=4.11.0,<5.0.0",
+  "pydantic>=2.10.0,<3.0.0",
+  "python-multipart>=0.0.20,<1.0.0",
+  "uvicorn[standard]>=0.34.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.27.0",
+  "pytest>=8.2.0",
+  "ruff>=0.6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["app*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008", "E501"]

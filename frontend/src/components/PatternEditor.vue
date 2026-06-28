@@ -1004,7 +1004,7 @@ function copyLuaCode() {
         
         <div class="panel-section lua-section">
           <div class="lua-header">
-            <h3>Lua Pattern ({{ localPattern.length }} 发)</h3>
+            <h3>Lua Pattern ({{ localPoints.length }} 个弹孔 / {{ localPattern.length }} 段补偿)</h3>
             <button class="copy-btn" @click="copyLuaCode" title="复制代码">复制</button>
           </div>
           <div class="lua-code-wrapper">

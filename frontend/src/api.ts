@@ -19,6 +19,11 @@ export interface PatternDetectResponse {
   pattern: RecoilData[]
   image_width: number
   image_height: number
+   shot_count: number
+   recoil_step_count: number
+   sample_count: number
+   skipped_sample_count: number
+   detection_mode: 'green' | 'target' | 'manual'
 }
 
 export interface GunConfig {
@@ -40,16 +45,46 @@ export const api = {
     file: File,
     scaleX: number = 1.0,
     scaleY: number = 1.0,
-    minDist: number = 5
+    minDist: number = 5,
+    detectionMode: 'auto' | 'green' | 'target' = 'auto'
   ): Promise<PatternDetectResponse> {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('scale_x', scaleX.toString())
     formData.append('scale_y', scaleY.toString())
     formData.append('min_dist', minDist.toString())
+    formData.append('detection_mode', detectionMode)
 
     const response = await axios.post<PatternDetectResponse>(
       `${API_BASE}/pattern/detect`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+    return response.data
+  },
+
+  async detectPatternBatch(
+    files: File[],
+    scaleX: number = 1.0,
+    scaleY: number = 1.0,
+    minDist: number = 5,
+    detectionMode: 'auto' | 'green' | 'target' = 'target'
+  ): Promise<PatternDetectResponse> {
+    const formData = new FormData()
+    for (const file of files) {
+      formData.append('files', file)
+    }
+    formData.append('scale_x', scaleX.toString())
+    formData.append('scale_y', scaleY.toString())
+    formData.append('min_dist', minDist.toString())
+    formData.append('detection_mode', detectionMode)
+
+    const response = await axios.post<PatternDetectResponse>(
+      `${API_BASE}/pattern/detect-batch`,
       formData,
       {
         headers: {

@@ -21,6 +21,7 @@ const scaleX = ref(1.0)
 const scaleY = ref(1.0)
 const minDist = ref(5)
 const dataInput = ref('')
+const detectionMode = ref<'auto' | 'green' | 'target'>('target')
 
 // 预览状态
 const previewMode = ref(false)
@@ -29,9 +30,19 @@ const previewPattern = ref<RecoilData[]>([])
 const previewImageUrl = ref('')
 const previewWidth = ref(0)
 const previewHeight = ref(0)
+const previewShotCount = ref(0)
+const previewStepCount = ref(0)
+const previewSampleCount = ref(0)
+const previewSkippedSampleCount = ref(0)
+const previewDetectionMode = ref<'green' | 'target' | 'manual'>('target')
+const previewFileNames = ref<string[]>([])
 
-async function handleFile(file: File) {
-  if (!file.type.startsWith('image/')) {
+async function handleFiles(files: File[]) {
+  if (files.length === 0) {
+    return
+  }
+
+  if (files.some(file => !file.type.startsWith('image/'))) {
     error.value = '请上传图片文件'
     return
   }
@@ -40,14 +51,22 @@ async function handleFile(file: File) {
   error.value = ''
 
   try {
-    const result = await api.detectPattern(file, scaleX.value, scaleY.value, minDist.value)
+    const result = files.length === 1
+      ? await api.detectPattern(files[0]!, scaleX.value, scaleY.value, minDist.value, detectionMode.value)
+      : await api.detectPatternBatch(files, scaleX.value, scaleY.value, minDist.value, detectionMode.value)
     
     if (result.success) {
       previewPoints.value = result.points
       previewPattern.value = result.pattern
-      previewImageUrl.value = URL.createObjectURL(file)
+      previewImageUrl.value = URL.createObjectURL(files[0]!)
       previewWidth.value = result.image_width
       previewHeight.value = result.image_height
+      previewShotCount.value = result.shot_count
+      previewStepCount.value = result.recoil_step_count
+      previewSampleCount.value = result.sample_count
+      previewSkippedSampleCount.value = result.skipped_sample_count
+      previewDetectionMode.value = result.detection_mode
+      previewFileNames.value = files.map(file => file.name)
       previewMode.value = true
     } else {
       error.value = result.message
@@ -74,18 +93,28 @@ function cancelPreview() {
   previewPoints.value = []
   previewPattern.value = []
   previewImageUrl.value = ''
+  previewShotCount.value = 0
+  previewStepCount.value = 0
+  previewSampleCount.value = 0
+  previewSkippedSampleCount.value = 0
+  previewFileNames.value = []
 }
 
 function handleDrop(e: DragEvent) {
   isDragging.value = false
-  const file = e.dataTransfer?.files[0]
-  if (file) handleFile(file)
+  const files = Array.from(e.dataTransfer?.files ?? [])
+  if (files.length > 0) {
+    handleFiles(files)
+  }
 }
 
 function handleFileInput(e: Event) {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (file) handleFile(file)
+  const files = Array.from(input.files ?? [])
+  if (files.length > 0) {
+    handleFiles(files)
+  }
+  input.value = ''
 }
 
 function parseDataInput() {
@@ -145,7 +174,15 @@ function parseDataInput() {
     <div v-if="previewMode" class="preview-mode">
       <div class="preview-header">
         <h3>识别结果预览</h3>
-        <span class="preview-info">识别到 {{ previewPoints.length }} 个弹道点</span>
+        <span class="preview-info">{{ previewShotCount }} 个弹孔 / {{ previewStepCount }} 段补偿</span>
+      </div>
+      <div class="preview-meta">
+        <span>模式：{{ previewDetectionMode === 'target' ? '靶场弹孔' : previewDetectionMode === 'green' ? '官方绿点' : '手动编辑' }}</span>
+        <span>样本：{{ previewSampleCount }} 张</span>
+        <span v-if="previewSkippedSampleCount > 0">跳过：{{ previewSkippedSampleCount }} 张</span>
+      </div>
+      <div v-if="previewFileNames.length > 1" class="preview-files">
+        已聚合：{{ previewFileNames.join('、') }}
       </div>
       
       <div class="preview-content">
@@ -172,7 +209,7 @@ function parseDataInput() {
         </div>
         
         <div class="preview-data">
-          <h4>弹道数据 ({{ previewPattern.length }} 发)</h4>
+          <h4>补偿数据 ({{ previewPattern.length }} 段)</h4>
           <div class="data-list">
             <div v-for="(p, i) in previewPattern.slice(0, 10)" :key="i" class="data-item">
               <span class="num">#{{ i + 1 }}</span>
@@ -180,7 +217,7 @@ function parseDataInput() {
               <span>X: {{ p.x.toFixed(2) }}</span>
             </div>
             <div v-if="previewPattern.length > 10" class="data-more">
-              ... 还有 {{ previewPattern.length - 10 }} 发
+              ... 还有 {{ previewPattern.length - 10 }} 段
             </div>
           </div>
         </div>
@@ -224,6 +261,14 @@ function parseDataInput() {
             <label>点间距</label>
             <input type="number" v-model.number="minDist" min="1" max="20" />
           </div>
+          <div class="param param-mode">
+            <label>识别模式</label>
+            <select v-model="detectionMode">
+              <option value="target">靶场弹孔</option>
+              <option value="auto">自动判断</option>
+              <option value="green">官方绿点</option>
+            </select>
+          </div>
         </div>
 
         <div
@@ -237,19 +282,20 @@ function parseDataInput() {
             ref="fileInput"
             type="file"
             accept="image/*"
+            multiple
             hidden
             @change="handleFileInput"
           />
           
           <div v-if="isLoading" class="loading">
             <div class="spinner"></div>
-            <p>正在识别弹道...</p>
+            <p>正在识别并聚合弹孔...</p>
           </div>
           
           <div v-else class="placeholder">
             <div class="icon">📁</div>
-            <p>拖拽弹道图到这里</p>
-            <p class="sub">或点击选择文件</p>
+            <p>拖拽靶场截图到这里</p>
+            <p class="sub">支持一次选择多张图，自动聚合平均弹道</p>
           </div>
         </div>
       </div>
@@ -327,6 +373,7 @@ function parseDataInput() {
   display: flex;
   gap: 20px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .param {
@@ -348,6 +395,19 @@ function parseDataInput() {
   background: #1a1a2e;
   color: #fff;
   text-align: center;
+}
+
+.param select {
+  min-width: 120px;
+  padding: 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.param-mode {
+  min-width: 140px;
 }
 
 .drop-zone {
@@ -449,6 +509,8 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .preview-header h3 {
@@ -457,6 +519,21 @@ textarea {
 
 .preview-info {
   color: #999;
+}
+
+.preview-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #8b949e;
+  font-size: 0.85rem;
+}
+
+.preview-files {
+  color: #6e7681;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .preview-content {

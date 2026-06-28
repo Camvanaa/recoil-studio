@@ -37,7 +37,7 @@ local guns = {
 -- 运行时状态
 --====================================================================================
 local currentGunIndex = 1
-local currentBullet = 0
+local currentStep = 0
 local recoilEnabled = false
 local resetPointState = false
 local totalMoveY = 0
@@ -51,25 +51,29 @@ local errorX = 0
 
 function getSleepTime()
     local gun = guns[currentGunIndex]
-    return math.floor(60000 / gun.rpm)
+    return math.max(1, math.floor((60000 / gun.rpm) + 0.5))
 end
 
 function getCurrentGun()
     return guns[currentGunIndex]
 end
 
-function getBulletRecoil(bulletIndex)
+function getBulletRecoil(stepIndex)
     local gun = getCurrentGun()
     local pattern = gun.pattern
     
-    if bulletIndex > #pattern then
-        bulletIndex = #pattern
+    if #pattern == 0 then
+        return 0, 0
     end
-    if bulletIndex < 1 then
-        bulletIndex = 1
+
+    if stepIndex > #pattern then
+        stepIndex = #pattern
+    end
+    if stepIndex < 1 then
+        stepIndex = 1
     end
     
-    local recoil = pattern[bulletIndex]
+    local recoil = pattern[stepIndex]
     local moveY = recoil.y * gun.verticalMul
     local moveX = recoil.x * gun.horizontalMul
     
@@ -105,6 +109,21 @@ function log(str, ...)
     if showLog then
         OutputLogMessage(scriptName .. "-[INFO]-" .. str .. "\\n", ...)
     end
+end
+
+function sleepWhileHolding(duration)
+    local elapsed = 0
+    while elapsed < duration do
+        if not IsMouseButtonPressed(clickBtn) then
+            return false
+        end
+
+        local slice = math.min(4, duration - elapsed)
+        Sleep(slice)
+        elapsed = elapsed + slice
+    end
+
+    return true
 end
 
 --====================================================================================
@@ -151,19 +170,30 @@ end
 function beginRecoilControl()
     local gun = getCurrentGun()
     local sleepTime = getSleepTime()
+    local firstStepDelay = math.max(1, math.floor((sleepTime * 0.55) + 0.5))
     
-    currentBullet = 0
+    currentStep = 0
     totalMoveY = 0
     totalMoveX = 0
     errorY = 0
     errorX = 0
     
     log("Start recoil control: %s, interval=%dms", gun.name, sleepTime)
+    log("Pattern steps=%d, inferred shots=%d", #gun.pattern, #gun.pattern + 1)
+
+    if #gun.pattern == 0 then
+        return
+    end
+
+    -- N个弹孔只会得到N-1段补偿，所以首段补偿在第1发开火后再介入。
+    if not sleepWhileHolding(firstStepDelay) then
+        return
+    end
     
-    repeat
-        currentBullet = currentBullet + 1
+    while IsMouseButtonPressed(clickBtn) and currentStep < #gun.pattern do
+        currentStep = currentStep + 1
         
-        local rawY, rawX = getBulletRecoil(currentBullet)
+        local rawY, rawX = getBulletRecoil(currentStep)
         local moveY, moveX = applyMovement(rawY, rawX)
         
         totalMoveY = totalMoveY + moveY
@@ -173,13 +203,18 @@ function beginRecoilControl()
             MoveMouseRelative(moveX, moveY)
         end
         
-        log("Bullet #%d: move=(%d,%d)", currentBullet, moveY, moveX)
+        log("Step #%d -> shot #%d: move=(%d,%d)", currentStep, currentStep + 1, moveY, moveX)
         
-        Sleep(sleepTime)
-        
-    until not IsMouseButtonPressed(clickBtn)
+        if currentStep >= #gun.pattern then
+            break
+        end
+
+        if not sleepWhileHolding(sleepTime) then
+            break
+        end
+    end
     
-    log("Stop at bullet #%d", currentBullet)
+    log("Stop at step #%d", currentStep)
     
     if resetPointState and (totalMoveY ~= 0 or totalMoveX ~= 0) then
         resetMousePosition()
@@ -246,7 +281,7 @@ end
         for i, p in enumerate(gun.pattern):
             y_val = round(p.y, 6)
             x_val = round(p.x, 6)
-            lines.append(f'            {{y={y_val}, x={x_val}}},    -- 第{i+1}发')
+            lines.append(f'            {{y={y_val}, x={x_val}}},    -- 第{i+2}发补偿')
         
         lines.append('        }')
         lines.append('    },')

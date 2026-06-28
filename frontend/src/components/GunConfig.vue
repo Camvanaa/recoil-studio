@@ -72,7 +72,7 @@ function handleAdd() {
     </div>
     
     <div class="pattern-preview">
-      <h4>弹道数据 ({{ pattern.length }} 发)</h4>
+      <h4>补偿数据 ({{ pattern.length }} 段)</h4>
       <div class="pattern-list">
         <div v-for="(p, i) in pattern" :key="i" class="pattern-item">
           <span class="bullet-num">#{{ i + 1 }}</span>

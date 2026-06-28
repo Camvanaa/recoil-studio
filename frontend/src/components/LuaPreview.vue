@@ -63,7 +63,7 @@ async function downloadLua() {
           <div class="gun-info">
             <div class="gun-name">{{ gun.name }}</div>
             <div class="gun-stats">
-              {{ gun.rpm }} RPM | {{ gun.pattern.length }} 发
+              {{ gun.rpm }} RPM | {{ gun.pattern.length }} 段补偿
             </div>
           </div>
           <button class="remove-btn" @click="emit('remove', i)">✕</button>

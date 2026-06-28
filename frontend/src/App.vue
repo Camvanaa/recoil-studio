@@ -22,6 +22,10 @@ interface Gun {
   pattern: RecoilData[]
 }
 
+function getShotCountFromPattern(recoilPattern: RecoilData[]) {
+  return recoilPattern.length > 0 ? recoilPattern.length + 1 : 0
+}
+
 const points = ref<Point[]>([])
 const pattern = ref<RecoilData[]>([])
 const imageUrl = ref<string>('')
@@ -105,7 +109,7 @@ function handleReset() {
         <div class="step-line" :class="{ active: currentStep >= 2 }"></div>
         <div :class="['step', { active: currentStep >= 2, current: currentStep === 2 }]">
           <span class="step-number">2</span>
-          <span>编辑弹道</span>
+          <span>编辑补偿</span>
         </div>
         <div class="step-line" :class="{ active: currentStep >= 3 }"></div>
         <div :class="['step', { active: currentStep >= 3, current: currentStep === 3 }]">
@@ -125,6 +129,10 @@ function handleReset() {
 
         <!-- 步骤2: 编辑弹道 -->
         <section v-if="currentStep === 2" class="section">
+          <div class="section-summary" v-if="points.length || pattern.length">
+            <span>{{ points.length || getShotCountFromPattern(pattern) }} 个弹孔</span>
+            <span>{{ pattern.length }} 段补偿</span>
+          </div>
           <PatternEditor
             :points="points"
             :pattern="pattern"
@@ -259,5 +267,13 @@ body {
   background: #16213e;
   border-radius: 12px;
   padding: 20px;
+}
+
+.section-summary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #9aa4b2;
+  font-size: 0.9rem;
 }
 </style>
